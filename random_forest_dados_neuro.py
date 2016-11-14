@@ -50,12 +50,31 @@ quadrados = quadrados.reshape(200,2000)
 # e cada linha representa um experimento.
 X = np.concatenate((triangulos, quadrados))
 
+# As linhas abaixo servem para que tenhamos uma ideia do conjunto de dados. 
+# Cada gráfico representa um experimento.
+plt.figure(1)
+
+plt.subplot(411)
+for row in range(0,400):
+    plt.plot(X[row,:])
+    plt.title("All samples")
+
+plt.subplot(412)
+for row in range(0,200):
+    plt.plot(X[row,:])
+    plt.title("Triangles")
+
+plt.subplot(413)
+for row in range(200,400):
+    plt.plot(X[row,:])
+    plt.title("Squares")
+
 # y é o conjunto dos rótulos; as 200 primeiras amostras, que são correspondentes aos 
 # triângulos, terão rótulo 1; as outras 200 amostras tem rótulo 0 (quadrados)
 y = np.zeros((400,))
 y[0:200] = 1
 
-model = RandomForestClassifier(n_estimators=30)
+model = RandomForestClassifier(n_estimators=300)
 RANDOM_SEED = 142  # fix the seed on each iteration
 
 # Shuffle: embaralhar os índices dos dados
@@ -91,20 +110,35 @@ print("Score: ", clf.score(Xtrain,ytrain))
 y_pred = model.predict(X[idx[cut:-1],:])
 y_true = y[idx[cut:-1]]
 
-# As linhas abaixo servem para que tenhamos uma ideia do conjunto de dados. 
-# Cada gráfico representa um experimento.
-#plt.plot(X[cut,:])
-#plt.plot(X[cut+1,:])
-#plt.plot(X[cut+2,:])
-#plt.plot(X[cut+3,:])
-#plt.plot(X[cut+4,:])
-#plt.plot(X[cut+5,:])
-#plt.plot(X[cut+6,:])
-#print(y_true)
-#print(y_pred)
+print("Média de importância das features:", model.feature_importances_.mean())
+plt.subplot(414)
+plt.plot(model.feature_importances_,"r*", markersize="6")
+plt.hlines(model.feature_importances_.mean(),0,2000,linestyles="dashed")
+plt.title("Feature Importances")
+
+reduce_features = False
+
+if reduce_features:
+    # Limpar os dados para considerar apenas as features que tem um "score" maior 
+    # que 0.005 (testando)
+    important_features = np.where(model.feature_importances_ >= 0.005)
+
+    Xreduced = X[:,important_features[0]]
+    Xtrain = Xreduced[idx[0:cut],:]
+    # ytrain é o mesmo
+
+    # Treinamento
+    print(Xtrain.shape)
+    clf = model.fit(Xtrain, ytrain)
+    print("Score: ", clf.score(Xtrain,ytrain))
+    # Predição: relacionada aos 25% do conjunto de dados que ainda não foi considerado.
+    y_pred = model.predict(Xreduced[idx[cut:-1],:])
+    y_true = y[idx[cut:-1]]
 
 diff = np.nonzero(y_true-y_pred)
 print("Numero de rotulos errados: {}/100".format(len(diff[0])))
+
+plt.show()
 
 #print(np.nonzero(diff).shape)
 #print(classification_report(y_true, y_pred, target_names=['triangulos', 'quadrados']))
